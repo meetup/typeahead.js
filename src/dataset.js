@@ -15,10 +15,6 @@ var Dataset = (function() {
   function Dataset(o) {
     utils.bindAll(this);
 
-    if (utils.isString(o.template) && !o.engine) {
-      $.error('no template engine specified');
-    }
-
     if (!o.local && !o.prefetch && !o.remote) {
       $.error('one of local, prefetch, or remote is required');
     }
@@ -29,7 +25,7 @@ var Dataset = (function() {
     this.header = o.header;
     this.footer = o.footer;
     this.valueKey = o.valueKey || 'value';
-    this.template = compileTemplate(o.template, o.engine, this.valueKey);
+    this.template = getRenderFn(o.template, this.valueKey);
 
     // used then deleted in #initialize
     this.local = o.local;
@@ -295,27 +291,16 @@ var Dataset = (function() {
 
   return Dataset;
 
-  function compileTemplate(template, engine, valueKey) {
-    var renderFn, compiledTemplate;
+  function getRenderFn(template, valueKey) {
+    var renderFn;
 
-    // precompiled template
-    if (utils.isFunction(template)) {
-      renderFn = template;
+    if (!utils.isString(template)) {
+        template = '<p>' + view[valueKey] + '</p>';
     }
 
-    // string template that needs to be compiled
-    else if (utils.isString(template)) {
-      compiledTemplate = engine.compile(template);
-      renderFn = utils.bind(compiledTemplate.render, compiledTemplate);
-    }
-
-    // if no template is provided, render suggestion
-    // as its value wrapped in a p tag
-    else {
-      renderFn = function(context) {
-        return '<p>' + context[valueKey] + '</p>';
-      };
-    }
+    renderFn = function(view) {
+        return Mustache.to_html(template, view);
+    };
 
     return renderFn;
   }
