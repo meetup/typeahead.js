@@ -68,20 +68,34 @@ var TypeaheadView = (function() {
 
     this.eventBus = o.eventBus;
 
-    $menu = this.$node.find('.tt-dropdown-menu');
+    $menu = o.selector ? $(o.selector) : this.$node.find('.tt-dropdown-menu');
     $input = this.$node.find('.tt-query');
     $hint = this.$node.find('.tt-hint');
 
-    this.dropdownView = new DropdownView({ menu: $menu })
-    .on('suggestionSelected', this._handleSelection)
-    .on('cursorMoved', this._clearHint)
-    .on('cursorMoved', this._setInputValueToSuggestionUnderCursor)
-    .on('cursorRemoved', this._setInputValueToQuery)
-    .on('cursorRemoved', this._updateHint)
-    .on('suggestionsRendered', this._updateHint)
-    .on('opened', this._updateHint)
-    .on('closed', this._clearHint)
-    .on('opened closed', this._propagateEvent);
+    if (o.selector) {
+      this.dropdownView = new InpageView({ menu: $menu })
+      .on('suggestionSelected', this._handleSelection)
+      .on('cursorMoved', this._clearHint)
+      .on('cursorMoved', this._setInputValueToSuggestionUnderCursor)
+      .on('cursorRemoved', this._setInputValueToQuery)
+      .on('cursorRemoved', this._updateHint)
+      .on('suggestionsRendered', this._updateHint)
+      .on('opened', this._updateHint)
+      .on('closed', this._clearHint)
+      .on('opened closed', this._propagateEvent);
+    }
+    else {
+      this.dropdownView = new DropdownView({ menu: $menu })
+      .on('suggestionSelected', this._handleSelection)
+      .on('cursorMoved', this._clearHint)
+      .on('cursorMoved', this._setInputValueToSuggestionUnderCursor)
+      .on('cursorRemoved', this._setInputValueToQuery)
+      .on('cursorRemoved', this._updateHint)
+      .on('suggestionsRendered', this._updateHint)
+      .on('opened', this._updateHint)
+      .on('closed', this._clearHint)
+      .on('opened closed', this._propagateEvent);
+    }
 
     this.inputView = new InputView({ input: $input, hint: $hint })
     .on('focused', this._openDropdown)
@@ -224,13 +238,18 @@ var TypeaheadView = (function() {
     _getSuggestions: function() {
       var that = this, query = this.inputView.getQuery();
 
-      if (utils.isBlankString(query)) { return; }
+      if (utils.isBlankString(query)) {
+        if (that.dropdownView.hasOwnProperty('restoreInitialState')) {
+          that.dropdownView.restoreInitialState();
+        }
+        return;
+      }
 
       utils.each(this.datasets, function(i, dataset) {
         dataset.getSuggestions(query, function(suggestions) {
           // only render the suggestions if the query hasn't changed
           if (query === that.inputView.getQuery()) {
-            that.dropdownView.renderSuggestions(dataset, suggestions);
+            that.dropdownView.renderSuggestions(dataset, suggestions, query);
           }
         });
       });

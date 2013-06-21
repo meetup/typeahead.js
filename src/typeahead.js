@@ -8,8 +8,19 @@
   var cache = {}, viewKey = 'ttView', methods;
 
   methods = {
-    initialize: function(datasetDefs) {
-      var datasets;
+    initialize: function(selectorDef, datasetDefs) {
+      var datasets, selector;
+
+      if (typeof selectorDef === 'object') {
+        datasetDefs = selectorDef;
+        selector = false;
+      }
+      else if (utils.isString(selectorDef)) {
+          selector = selectorDef;
+      }
+      else {
+        $.error('selector must be a string');
+      }
 
       datasetDefs = utils.isArray(datasetDefs) ? datasetDefs : [datasetDefs];
 
@@ -41,7 +52,8 @@
         $input.data(viewKey, new TypeaheadView({
           input: $input,
           eventBus: eventBus = new EventBus({ el: $input }),
-          datasets: datasets
+          datasets: datasets,
+          selector: selector
         }));
 
         $.when.apply($, deferreds)

@@ -11,6 +11,7 @@ var semver = require('semver'),
       'src/dataset.js',
       'src/input_view.js',
       'src/dropdown_view.js',
+      'src/inpage_view.js',
       'src/typeahead_view.js',
       'src/typeahead.js'
     ];

@@ -294,12 +294,14 @@ var Dataset = (function() {
   function getRenderFn(template, valueKey) {
     var renderFn;
 
-    if (!utils.isString(template)) {
-        template = '<p>' + view[valueKey] + '</p>';
+    if ( !utils.isObject(template) ) {
+      template = utils.isString(template) ?
+        { result: template } : { result: '<p>{{' + valueKey + '}}</p>' };
     }
 
-    renderFn = function(view) {
-        return Mustache.to_html(template, view);
+    renderFn = function(view, templateKey) {
+        var tpl = templateKey ? template[templateKey] : template.results;
+        return Mustache.to_html( tpl, view );
     };
 
     return renderFn;
