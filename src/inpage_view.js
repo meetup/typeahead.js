@@ -53,15 +53,12 @@ var InpageView = (function() {
     },
 
     _show: function() {
-      // can't use jQuery#show because $menu is a span element we want
-      // display: block; not dislay: inline;
-      //this.$menu.css('display', 'block');
-      this.$originals.remove();
+      //this.$originals.remove();
+      this.$originals.css('display', 'none');
       this.$menu.find('.tt-dataset').css('display', 'block');
     },
 
     _hide: function() {
-      //this.$menu.css('display', 'none');
       this.$menu.find('.tt-dataset').css('display', 'none');
     },
 
@@ -190,7 +187,7 @@ var InpageView = (function() {
           $el;
 
       // datum can be either a suggestion datum or datum to render the no
-      // results view. Both are style as a suggestion.
+      // results view. Both are styled as a suggestion.
       var buildFragment = function(datum, templateKey) {
         compiledHtml = dataset.template(datum, templateKey);
         elBuilder.innerHTML = wrapper.replace('%body', compiledHtml);
@@ -237,7 +234,6 @@ var InpageView = (function() {
 
       // show this dataset in case it was previously empty
       // and render the new suggestions
-      //$dataset.show().find('.tt-suggestions').html(fragment);
       $dataset.css('display', 'block').find('.tt-suggestions').html(fragment);
 
       this.trigger('suggestionsRendered');
@@ -249,7 +245,6 @@ var InpageView = (function() {
             this.$menu.find('[class^="tt-dataset-"]'),
           $suggestions = $datasets.find('.tt-suggestions');
 
-      //$datasets.hide();
       $datasets.css('display', 'none');
       $suggestions.empty();
 
@@ -260,8 +255,8 @@ var InpageView = (function() {
     },
 
     restoreInitialState: function() {
-      alert('restore initial state');
-      this.$menu.prepend(this.$originals);
+      //this.$menu.prepend(this.$originals);
+      this.$originals.css('display', 'block');
     }
   });
 
