@@ -229,7 +229,7 @@ var InpageView = (function() {
       }
       // no suggestions to render; Render prompt to add instead
       else {
-        buildFragment({query: query}, 'noResults');
+        buildFragment({query: query, safeQuery: query.replace(/'/g, '&apos;').replace(/"/g, '\\"')}, 'noResults');
       }
 
       // show this dataset in case it was previously empty

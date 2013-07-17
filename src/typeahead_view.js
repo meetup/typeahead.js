@@ -74,7 +74,9 @@ var TypeaheadView = (function() {
 
     if (o.selector) {
       this.dropdownView = new InpageView({ menu: $menu })
-      .on('suggestionSelected', this._handleSelection)
+      // InpageView assumes you want to do something else with the suggestions
+      // Disable typeahead native selection handler
+      //.on('suggestionSelected', this._handleSelection);
       .on('cursorMoved', this._clearHint)
       .on('cursorMoved', this._setInputValueToSuggestionUnderCursor)
       .on('cursorRemoved', this._setInputValueToQuery)
@@ -225,7 +227,7 @@ var TypeaheadView = (function() {
         // if triggered by keypress, prevent default browser behavior
         // which is most likely the submission of a form
         // note: e.data is the jquery event
-        byClick ? this.inputView.focus() : e.data.preventDefault();
+        byClick ? this.inputView.trigger('focus') : e.data.preventDefault();
 
         // focus is not a synchronous event in ie, so we deal with it
         byClick && utils.isMsie() ?

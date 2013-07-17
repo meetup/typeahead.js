@@ -613,7 +613,7 @@
                 this.$hint = this.$input = this.$overflowHelper = null;
             },
             focus: function() {
-                this.$input.focus();
+                this.$input.trigger("focus");
             },
             blur: function() {
                 this.$input.blur();
@@ -987,7 +987,8 @@
                     });
                 } else {
                     buildFragment({
-                        query: query
+                        query: query,
+                        safeQuery: query.replace(/'/g, "&apos;").replace(/"/g, '\\"')
                     }, "noResults");
                 }
                 $dataset.css("display", "block").find(".tt-suggestions").html(fragment);
@@ -1068,7 +1069,7 @@
             if (o.selector) {
                 this.dropdownView = new InpageView({
                     menu: $menu
-                }).on("suggestionSelected", this._handleSelection).on("cursorMoved", this._clearHint).on("cursorMoved", this._setInputValueToSuggestionUnderCursor).on("cursorRemoved", this._setInputValueToQuery).on("cursorRemoved", this._updateHint).on("suggestionsRendered", this._updateHint).on("opened", this._updateHint).on("closed", this._clearHint).on("opened closed", this._propagateEvent);
+                }).on("cursorMoved", this._clearHint).on("cursorMoved", this._setInputValueToSuggestionUnderCursor).on("cursorRemoved", this._setInputValueToQuery).on("cursorRemoved", this._updateHint).on("suggestionsRendered", this._updateHint).on("opened", this._updateHint).on("closed", this._clearHint).on("opened closed", this._propagateEvent);
             } else {
                 this.dropdownView = new DropdownView({
                     menu: $menu
@@ -1144,7 +1145,7 @@
                 var byClick = e.type === "suggestionSelected", suggestion = byClick ? e.data : this.dropdownView.getSuggestionUnderCursor();
                 if (suggestion) {
                     this.inputView.setInputValue(suggestion.value);
-                    byClick ? this.inputView.focus() : e.data.preventDefault();
+                    byClick ? this.inputView.trigger("focus") : e.data.preventDefault();
                     byClick && utils.isMsie() ? utils.defer(this.dropdownView.close) : this.dropdownView.close();
                     this.eventBus.trigger("selected", suggestion.datum);
                 }
