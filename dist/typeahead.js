@@ -4,7 +4,7 @@
  * Copyright 2013 Twitter, Inc. and other contributors; Licensed MIT
  */
 
-(function($) {
+(function($, Mustache) {
     var VERSION = "0.9.2";
     var utils = {
         isMsie: function() {
@@ -373,9 +373,6 @@
         };
         function Dataset(o) {
             utils.bindAll(this);
-            if (utils.isString(o.template) && !o.engine) {
-                $.error("no template engine specified");
-            }
             if (!o.local && !o.prefetch && !o.remote) {
                 $.error("one of local, prefetch, or remote is required");
             }
@@ -385,7 +382,7 @@
             this.header = o.header;
             this.footer = o.footer;
             this.valueKey = o.valueKey || "value";
-            this.template = compileTemplate(o.template, o.engine, this.valueKey);
+            this.template = getRenderFn(o.template, this.valueKey);
             this.local = o.local;
             this.prefetch = o.prefetch;
             this.remote = o.remote;
@@ -543,18 +540,14 @@
             }
         });
         return Dataset;
-        function compileTemplate(template, engine, valueKey) {
-            var renderFn, compiledTemplate;
-            if (utils.isFunction(template)) {
-                renderFn = template;
-            } else if (utils.isString(template)) {
-                compiledTemplate = engine.compile(template);
-                renderFn = utils.bind(compiledTemplate.render, compiledTemplate);
-            } else {
-                renderFn = function(context) {
-                    return "<p>" + context[valueKey] + "</p>";
-                };
+        function getRenderFn(template, valueKey) {
+            var renderFn;
+            if (!utils.isString(template)) {
+                template = "<p>" + view[valueKey] + "</p>";
             }
+            renderFn = function(view) {
+                return Mustache.to_html(template, view);
+            };
             return renderFn;
         }
     }();
@@ -1123,4 +1116,4 @@
             }
         };
     })();
-})(window.jQuery);
+})(window.jQuery, window.Mustache);
