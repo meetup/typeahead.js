@@ -975,7 +975,7 @@
                 };
                 if ($dataset.length === 0) {
                     $suggestionsList = $(html.suggestionsList).css(css.suggestionsList);
-                    $dataset = $("<div></div>").addClass(datasetClassName + " form-block tt-dataset").append(dataset.header).append($suggestionsList).append(dataset.footer).appendTo(this.$menu);
+                    $dataset = $("<div></div>").addClass(datasetClassName + " formBlock tt-dataset").append(dataset.header).append($suggestionsList).append(dataset.footer).appendTo(this.$menu);
                 }
                 this.isEmpty = false;
                 this.isOpen && this._show();
@@ -985,12 +985,11 @@
                     utils.each(suggestions, function(i, suggestion) {
                         buildFragment(suggestion.datum);
                     });
-                } else {
-                    buildFragment({
-                        query: query,
-                        safeQuery: query.replace(/'/g, "&apos;").replace(/"/g, '\\"')
-                    }, "noResults");
                 }
+                buildFragment({
+                    query: query,
+                    safeQuery: query.replace(/'/g, "&apos;").replace(/"/g, '\\"')
+                }, "noResults");
                 $dataset.css("display", "block").find(".tt-suggestions").html(fragment);
                 this.trigger("suggestionsRendered");
             },

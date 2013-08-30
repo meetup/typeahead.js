@@ -208,7 +208,7 @@ var InpageView = (function() {
         $suggestionsList = $(html.suggestionsList).css(css.suggestionsList);
 
         $dataset = $('<div></div>')
-        .addClass(datasetClassName + ' form-block tt-dataset')
+        .addClass(datasetClassName + ' formBlock tt-dataset')
         .append(dataset.header)
         .append($suggestionsList)
         .append(dataset.footer)
@@ -227,10 +227,10 @@ var InpageView = (function() {
           buildFragment(suggestion.datum);
         });
       }
-      // no suggestions to render; Render prompt to add instead
-      else {
-        buildFragment({query: query, safeQuery: query.replace(/'/g, '&apos;').replace(/"/g, '\\"')}, 'noResults');
-      }
+      // else: no suggestions to render; do nothing.
+
+      // Always able to add current query as new item
+      buildFragment({query: query, safeQuery: query.replace(/'/g, '&apos;').replace(/"/g, '\\"')}, 'noResults');
 
       // show this dataset in case it was previously empty
       // and render the new suggestions
