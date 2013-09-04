@@ -1,12 +1,6 @@
-/*
- * typeahead.js
- * https://github.com/twitter/typeahead
- * Copyright 2013 Twitter, Inc. and other contributors; Licensed MIT
- */
-
-var DropdownView = (function() {
+var InpageView = (function() {
   var html = {
-        suggestionsList: '<span class="tt-suggestions"></span>'
+        suggestionsList: '<ul class="tt-suggestions touchList"></ul>'
       },
       css = {
         suggestionsList: { display: 'block' },
@@ -17,7 +11,7 @@ var DropdownView = (function() {
   // constructor
   // -----------
 
-  function DropdownView(o) {
+  function InpageView(o) {
     utils.bindAll(this);
 
     this.isOpen = false;
@@ -29,9 +23,12 @@ var DropdownView = (function() {
     .on('mouseleave.tt', this._handleMouseleave)
     .on('click.tt', '.tt-suggestion', this._handleSelection)
     .on('mouseover.tt', '.tt-suggestion', this._handleMouseover);
+
+    this.$originals = this.$menu.find('.j-original-content');
+    this.orginalContent = this.$menu.html();
   }
 
-  utils.mixin(DropdownView.prototype, EventTarget, {
+  utils.mixin(InpageView.prototype, EventTarget, {
     // private methods
     // ---------------
 
@@ -56,13 +53,13 @@ var DropdownView = (function() {
     },
 
     _show: function() {
-      // can't use jQuery#show because $menu is a span element we want
-      // display: block; not dislay: inline;
-      this.$menu.css('display', 'block');
+      //this.$originals.remove();
+      this.$originals.css('display', 'none');
+      this.$menu.find('.tt-dataset').css('display', 'block');
     },
 
     _hide: function() {
-      this.$menu.css('display', 'none');
+      this.$menu.find('.tt-dataset').css('display', 'none');
     },
 
     _moveCursor: function(increment) {
@@ -99,6 +96,10 @@ var DropdownView = (function() {
 
     _getSuggestions: function() {
       return this.$menu.find('.tt-suggestions > .tt-suggestion');
+    },
+
+    _renderNoSuggestionState: function(query) {
+      this.$menu.text(query);
     },
 
     // public methods
@@ -175,9 +176,9 @@ var DropdownView = (function() {
       return $suggestion.length > 0 ? extractSuggestion($suggestion) : null;
     },
 
-    renderSuggestions: function(dataset, suggestions) {
+    renderSuggestions: function(dataset, suggestions, query) {
       var datasetClassName = 'tt-dataset-' + dataset.name,
-          wrapper = '<div class="tt-suggestion">%body</div>',
+          wrapper = '<li class="tt-suggestion touchList-item">%body</li>',
           compiledHtml,
           $suggestionsList,
           $dataset = this.$menu.find('.' + datasetClassName),
@@ -185,50 +186,55 @@ var DropdownView = (function() {
           fragment,
           $el;
 
+      // datum can be either a suggestion datum or datum to render the no
+      // results view. Both are styled as a suggestion.
+      var buildFragment = function(datum, templateKey) {
+        compiledHtml = dataset.template(datum, templateKey);
+        elBuilder.innerHTML = wrapper.replace('%body', compiledHtml);
+
+        $el = $(elBuilder.firstChild)
+        .css(css.suggestion)
+        .data('suggestion', datum);
+
+        $el.children().each(function() {
+          $(this).css(css.suggestionChild);
+        });
+
+        fragment.appendChild($el[0]);
+      };
+
       // first time rendering suggestions for this dataset
       if ($dataset.length === 0) {
         $suggestionsList = $(html.suggestionsList).css(css.suggestionsList);
 
         $dataset = $('<div></div>')
-        .addClass(datasetClassName)
+        .addClass(datasetClassName + ' formBlock tt-dataset')
         .append(dataset.header)
         .append($suggestionsList)
         .append(dataset.footer)
         .appendTo(this.$menu);
       }
 
+      this.isEmpty = false;
+      this.isOpen && this._show();
+
+      elBuilder = document.createElement('div');
+      fragment = document.createDocumentFragment();
+
       // suggestions to be rendered
       if (suggestions.length > 0) {
-        this.isEmpty = false;
-        this.isOpen && this._show();
-
-        elBuilder = document.createElement('div');
-        fragment = document.createDocumentFragment();
-
         utils.each(suggestions, function(i, suggestion) {
-          compiledHtml = dataset.template(suggestion.datum);
-          elBuilder.innerHTML = wrapper.replace('%body', compiledHtml);
-
-          $el = $(elBuilder.firstChild)
-          .css(css.suggestion)
-          .data('suggestion', suggestion);
-
-          $el.children().each(function() {
-            $(this).css(css.suggestionChild);
-          });
-
-          fragment.appendChild($el[0]);
+          buildFragment(suggestion.datum);
         });
-
-        // show this dataset in case it was previously empty
-        // and render the new suggestions
-        $dataset.show().find('.tt-suggestions').html(fragment);
       }
+      // else: no suggestions to render; do nothing.
 
-      // no suggestions to render
-      else {
-        this.clearSuggestions(dataset.name);
-      }
+      // Always able to add current query as new item
+      buildFragment({query: query, safeQuery: query.replace(/'/g, '&apos;').replace(/"/g, '\\"')}, 'noResults');
+
+      // show this dataset in case it was previously empty
+      // and render the new suggestions
+      $dataset.css('display', 'block').find('.tt-suggestions').html(fragment);
 
       this.trigger('suggestionsRendered');
     },
@@ -239,17 +245,22 @@ var DropdownView = (function() {
             this.$menu.find('[class^="tt-dataset-"]'),
           $suggestions = $datasets.find('.tt-suggestions');
 
-      $datasets.hide();
+      $datasets.css('display', 'none');
       $suggestions.empty();
 
       if (this._getSuggestions().length === 0) {
         this.isEmpty = true;
         this._hide();
       }
+    },
+
+    restoreInitialState: function() {
+      //this.$menu.prepend(this.$originals);
+      this.$originals.css('display', 'block');
     }
   });
 
-  return DropdownView;
+  return InpageView;
 
   // helper functions
   // ----------------

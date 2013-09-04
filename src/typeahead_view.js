@@ -68,20 +68,36 @@ var TypeaheadView = (function() {
 
     this.eventBus = o.eventBus;
 
-    $menu = this.$node.find('.tt-dropdown-menu');
+    $menu = o.selector ? $(o.selector) : this.$node.find('.tt-dropdown-menu');
     $input = this.$node.find('.tt-query');
     $hint = this.$node.find('.tt-hint');
 
-    this.dropdownView = new DropdownView({ menu: $menu })
-    .on('suggestionSelected', this._handleSelection)
-    .on('cursorMoved', this._clearHint)
-    .on('cursorMoved', this._setInputValueToSuggestionUnderCursor)
-    .on('cursorRemoved', this._setInputValueToQuery)
-    .on('cursorRemoved', this._updateHint)
-    .on('suggestionsRendered', this._updateHint)
-    .on('opened', this._updateHint)
-    .on('closed', this._clearHint)
-    .on('opened closed', this._propagateEvent);
+    if (o.selector) {
+      this.dropdownView = new InpageView({ menu: $menu })
+      // InpageView assumes you want to do something else with the suggestions
+      // Disable typeahead native selection handler
+      //.on('suggestionSelected', this._handleSelection);
+      .on('cursorMoved', this._clearHint)
+      .on('cursorMoved', this._setInputValueToSuggestionUnderCursor)
+      .on('cursorRemoved', this._setInputValueToQuery)
+      .on('cursorRemoved', this._updateHint)
+      .on('suggestionsRendered', this._updateHint)
+      .on('opened', this._updateHint)
+      .on('closed', this._clearHint)
+      .on('opened closed', this._propagateEvent);
+    }
+    else {
+      this.dropdownView = new DropdownView({ menu: $menu })
+      .on('suggestionSelected', this._handleSelection)
+      .on('cursorMoved', this._clearHint)
+      .on('cursorMoved', this._setInputValueToSuggestionUnderCursor)
+      .on('cursorRemoved', this._setInputValueToQuery)
+      .on('cursorRemoved', this._updateHint)
+      .on('suggestionsRendered', this._updateHint)
+      .on('opened', this._updateHint)
+      .on('closed', this._clearHint)
+      .on('opened closed', this._propagateEvent);
+    }
 
     this.inputView = new InputView({ input: $input, hint: $hint })
     .on('focused', this._openDropdown)
@@ -211,7 +227,7 @@ var TypeaheadView = (function() {
         // if triggered by keypress, prevent default browser behavior
         // which is most likely the submission of a form
         // note: e.data is the jquery event
-        byClick ? this.inputView.focus() : e.data.preventDefault();
+        byClick ? this.inputView.trigger('focus') : e.data.preventDefault();
 
         // focus is not a synchronous event in ie, so we deal with it
         byClick && utils.isMsie() ?
@@ -224,13 +240,18 @@ var TypeaheadView = (function() {
     _getSuggestions: function() {
       var that = this, query = this.inputView.getQuery();
 
-      if (utils.isBlankString(query)) { return; }
+      if (utils.isBlankString(query)) {
+        if (that.dropdownView.hasOwnProperty('restoreInitialState')) {
+          that.dropdownView.restoreInitialState();
+        }
+        return;
+      }
 
       utils.each(this.datasets, function(i, dataset) {
         dataset.getSuggestions(query, function(suggestions) {
           // only render the suggestions if the query hasn't changed
           if (query === that.inputView.getQuery()) {
-            that.dropdownView.renderSuggestions(dataset, suggestions);
+            that.dropdownView.renderSuggestions(dataset, suggestions, query);
           }
         });
       });

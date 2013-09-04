@@ -102,7 +102,7 @@ var InputView = (function() {
     },
 
     focus: function() {
-      this.$input.focus();
+      this.$input.trigger('focus');
     },
 
     blur: function() {

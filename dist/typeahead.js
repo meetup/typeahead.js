@@ -542,11 +542,16 @@
         return Dataset;
         function getRenderFn(template, valueKey) {
             var renderFn;
-            if (!utils.isString(template)) {
-                template = "<p>" + view[valueKey] + "</p>";
+            if (!utils.isObject(template)) {
+                template = utils.isString(template) ? {
+                    result: template
+                } : {
+                    result: "<p>{{" + valueKey + "}}</p>"
+                };
             }
-            renderFn = function(view) {
-                return Mustache.to_html(template, view);
+            renderFn = function(view, templateKey) {
+                var tpl = templateKey ? template[templateKey] : template.results;
+                return Mustache.to_html(tpl, view);
             };
             return renderFn;
         }
@@ -608,7 +613,7 @@
                 this.$hint = this.$input = this.$overflowHelper = null;
             },
             focus: function() {
-                this.$input.focus();
+                this.$input.trigger("focus");
             },
             blur: function() {
                 this.$input.blur();
@@ -718,7 +723,7 @@
                 this.$menu.css("display", "block");
             },
             _hide: function() {
-                this.$menu.hide();
+                this.$menu.css("display", "none");
             },
             _moveCursor: function(increment) {
                 var $suggestions, $cur, nextIndex, $underCursor;
@@ -834,6 +839,178 @@
             return $el.data("suggestion");
         }
     }();
+    var InpageView = function() {
+        var html = {
+            suggestionsList: '<ul class="tt-suggestions touchList"></ul>'
+        }, css = {
+            suggestionsList: {
+                display: "block"
+            },
+            suggestion: {
+                whiteSpace: "nowrap",
+                cursor: "pointer"
+            },
+            suggestionChild: {
+                whiteSpace: "normal"
+            }
+        };
+        function InpageView(o) {
+            utils.bindAll(this);
+            this.isOpen = false;
+            this.isEmpty = true;
+            this.isMouseOverDropdown = false;
+            this.$menu = $(o.menu).on("mouseenter.tt", this._handleMouseenter).on("mouseleave.tt", this._handleMouseleave).on("click.tt", ".tt-suggestion", this._handleSelection).on("mouseover.tt", ".tt-suggestion", this._handleMouseover);
+            this.$originals = this.$menu.find(".j-original-content");
+            this.orginalContent = this.$menu.html();
+        }
+        utils.mixin(InpageView.prototype, EventTarget, {
+            _handleMouseenter: function() {
+                this.isMouseOverDropdown = true;
+            },
+            _handleMouseleave: function() {
+                this.isMouseOverDropdown = false;
+            },
+            _handleMouseover: function($e) {
+                var $suggestion = $($e.currentTarget);
+                this._getSuggestions().removeClass("tt-is-under-cursor");
+                $suggestion.addClass("tt-is-under-cursor");
+            },
+            _handleSelection: function($e) {
+                var $suggestion = $($e.currentTarget);
+                this.trigger("suggestionSelected", extractSuggestion($suggestion));
+            },
+            _show: function() {
+                this.$originals.css("display", "none");
+                this.$menu.find(".tt-dataset").css("display", "block");
+            },
+            _hide: function() {
+                this.$menu.find(".tt-dataset").css("display", "none");
+            },
+            _moveCursor: function(increment) {
+                var $suggestions, $cur, nextIndex, $underCursor;
+                if (!this.isVisible()) {
+                    return;
+                }
+                $suggestions = this._getSuggestions();
+                $cur = $suggestions.filter(".tt-is-under-cursor");
+                $cur.removeClass("tt-is-under-cursor");
+                nextIndex = $suggestions.index($cur) + increment;
+                nextIndex = (nextIndex + 1) % ($suggestions.length + 1) - 1;
+                if (nextIndex === -1) {
+                    this.trigger("cursorRemoved");
+                    return;
+                } else if (nextIndex < -1) {
+                    nextIndex = $suggestions.length - 1;
+                }
+                $underCursor = $suggestions.eq(nextIndex).addClass("tt-is-under-cursor");
+                this.trigger("cursorMoved", extractSuggestion($underCursor));
+            },
+            _getSuggestions: function() {
+                return this.$menu.find(".tt-suggestions > .tt-suggestion");
+            },
+            _renderNoSuggestionState: function(query) {
+                this.$menu.text(query);
+            },
+            destroy: function() {
+                this.$menu.off(".tt");
+                this.$menu = null;
+            },
+            isVisible: function() {
+                return this.isOpen && !this.isEmpty;
+            },
+            closeUnlessMouseIsOverDropdown: function() {
+                if (!this.isMouseOverDropdown) {
+                    this.close();
+                }
+            },
+            close: function() {
+                if (this.isOpen) {
+                    this.isOpen = false;
+                    this._hide();
+                    this.$menu.find(".tt-suggestions > .tt-suggestion").removeClass("tt-is-under-cursor");
+                    this.trigger("closed");
+                }
+            },
+            open: function() {
+                if (!this.isOpen) {
+                    this.isOpen = true;
+                    !this.isEmpty && this._show();
+                    this.trigger("opened");
+                }
+            },
+            setLanguageDirection: function(dir) {
+                var ltrCss = {
+                    left: "0",
+                    right: "auto"
+                }, rtlCss = {
+                    left: "auto",
+                    right: " 0"
+                };
+                dir === "ltr" ? this.$menu.css(ltrCss) : this.$menu.css(rtlCss);
+            },
+            moveCursorUp: function() {
+                this._moveCursor(-1);
+            },
+            moveCursorDown: function() {
+                this._moveCursor(+1);
+            },
+            getSuggestionUnderCursor: function() {
+                var $suggestion = this._getSuggestions().filter(".tt-is-under-cursor").first();
+                return $suggestion.length > 0 ? extractSuggestion($suggestion) : null;
+            },
+            getFirstSuggestion: function() {
+                var $suggestion = this._getSuggestions().first();
+                return $suggestion.length > 0 ? extractSuggestion($suggestion) : null;
+            },
+            renderSuggestions: function(dataset, suggestions, query) {
+                var datasetClassName = "tt-dataset-" + dataset.name, wrapper = '<li class="tt-suggestion touchList-item">%body</li>', compiledHtml, $suggestionsList, $dataset = this.$menu.find("." + datasetClassName), elBuilder, fragment, $el;
+                var buildFragment = function(datum, templateKey) {
+                    compiledHtml = dataset.template(datum, templateKey);
+                    elBuilder.innerHTML = wrapper.replace("%body", compiledHtml);
+                    $el = $(elBuilder.firstChild).css(css.suggestion).data("suggestion", datum);
+                    $el.children().each(function() {
+                        $(this).css(css.suggestionChild);
+                    });
+                    fragment.appendChild($el[0]);
+                };
+                if ($dataset.length === 0) {
+                    $suggestionsList = $(html.suggestionsList).css(css.suggestionsList);
+                    $dataset = $("<div></div>").addClass(datasetClassName + " formBlock tt-dataset").append(dataset.header).append($suggestionsList).append(dataset.footer).appendTo(this.$menu);
+                }
+                this.isEmpty = false;
+                this.isOpen && this._show();
+                elBuilder = document.createElement("div");
+                fragment = document.createDocumentFragment();
+                if (suggestions.length > 0) {
+                    utils.each(suggestions, function(i, suggestion) {
+                        buildFragment(suggestion.datum);
+                    });
+                }
+                buildFragment({
+                    query: query,
+                    safeQuery: query.replace(/'/g, "&apos;").replace(/"/g, '\\"')
+                }, "noResults");
+                $dataset.css("display", "block").find(".tt-suggestions").html(fragment);
+                this.trigger("suggestionsRendered");
+            },
+            clearSuggestions: function(datasetName) {
+                var $datasets = datasetName ? this.$menu.find(".tt-dataset-" + datasetName) : this.$menu.find('[class^="tt-dataset-"]'), $suggestions = $datasets.find(".tt-suggestions");
+                $datasets.css("display", "none");
+                $suggestions.empty();
+                if (this._getSuggestions().length === 0) {
+                    this.isEmpty = true;
+                    this._hide();
+                }
+            },
+            restoreInitialState: function() {
+                this.$originals.css("display", "block");
+            }
+        });
+        return InpageView;
+        function extractSuggestion($el) {
+            return $el.data("suggestion");
+        }
+    }();
     var TypeaheadView = function() {
         var html = {
             wrapper: '<span class="twitter-typeahead"></span>',
@@ -885,12 +1062,18 @@
             this.datasets = o.datasets;
             this.dir = null;
             this.eventBus = o.eventBus;
-            $menu = this.$node.find(".tt-dropdown-menu");
+            $menu = o.selector ? $(o.selector) : this.$node.find(".tt-dropdown-menu");
             $input = this.$node.find(".tt-query");
             $hint = this.$node.find(".tt-hint");
-            this.dropdownView = new DropdownView({
-                menu: $menu
-            }).on("suggestionSelected", this._handleSelection).on("cursorMoved", this._clearHint).on("cursorMoved", this._setInputValueToSuggestionUnderCursor).on("cursorRemoved", this._setInputValueToQuery).on("cursorRemoved", this._updateHint).on("suggestionsRendered", this._updateHint).on("opened", this._updateHint).on("closed", this._clearHint).on("opened closed", this._propagateEvent);
+            if (o.selector) {
+                this.dropdownView = new InpageView({
+                    menu: $menu
+                }).on("cursorMoved", this._clearHint).on("cursorMoved", this._setInputValueToSuggestionUnderCursor).on("cursorRemoved", this._setInputValueToQuery).on("cursorRemoved", this._updateHint).on("suggestionsRendered", this._updateHint).on("opened", this._updateHint).on("closed", this._clearHint).on("opened closed", this._propagateEvent);
+            } else {
+                this.dropdownView = new DropdownView({
+                    menu: $menu
+                }).on("suggestionSelected", this._handleSelection).on("cursorMoved", this._clearHint).on("cursorMoved", this._setInputValueToSuggestionUnderCursor).on("cursorRemoved", this._setInputValueToQuery).on("cursorRemoved", this._updateHint).on("suggestionsRendered", this._updateHint).on("opened", this._updateHint).on("closed", this._clearHint).on("opened closed", this._propagateEvent);
+            }
             this.inputView = new InputView({
                 input: $input,
                 hint: $hint
@@ -961,7 +1144,7 @@
                 var byClick = e.type === "suggestionSelected", suggestion = byClick ? e.data : this.dropdownView.getSuggestionUnderCursor();
                 if (suggestion) {
                     this.inputView.setInputValue(suggestion.value);
-                    byClick ? this.inputView.focus() : e.data.preventDefault();
+                    byClick ? this.inputView.trigger("focus") : e.data.preventDefault();
                     byClick && utils.isMsie() ? utils.defer(this.dropdownView.close) : this.dropdownView.close();
                     this.eventBus.trigger("selected", suggestion.datum);
                 }
@@ -969,12 +1152,15 @@
             _getSuggestions: function() {
                 var that = this, query = this.inputView.getQuery();
                 if (utils.isBlankString(query)) {
+                    if (that.dropdownView.hasOwnProperty("restoreInitialState")) {
+                        that.dropdownView.restoreInitialState();
+                    }
                     return;
                 }
                 utils.each(this.datasets, function(i, dataset) {
                     dataset.getSuggestions(query, function(suggestions) {
                         if (query === that.inputView.getQuery()) {
-                            that.dropdownView.renderSuggestions(dataset, suggestions);
+                            that.dropdownView.renderSuggestions(dataset, suggestions, query);
                         }
                     });
                 });
@@ -1055,8 +1241,16 @@
     (function() {
         var cache = {}, viewKey = "ttView", methods;
         methods = {
-            initialize: function(datasetDefs) {
-                var datasets;
+            initialize: function(selectorDef, datasetDefs) {
+                var datasets, selector;
+                if (typeof selectorDef === "object") {
+                    datasetDefs = selectorDef;
+                    selector = false;
+                } else if (utils.isString(selectorDef)) {
+                    selector = selectorDef;
+                } else {
+                    $.error("selector must be a string");
+                }
                 datasetDefs = utils.isArray(datasetDefs) ? datasetDefs : [ datasetDefs ];
                 if (datasetDefs.length === 0) {
                     $.error("no datasets provided");
@@ -1081,7 +1275,8 @@
                         eventBus: eventBus = new EventBus({
                             el: $input
                         }),
-                        datasets: datasets
+                        datasets: datasets,
+                        selector: selector
                     }));
                     $.when.apply($, deferreds).always(function() {
                         utils.defer(function() {
