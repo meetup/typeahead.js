@@ -551,7 +551,7 @@
             }
             renderFn = function(view, templateKey) {
                 var tpl = templateKey ? template[templateKey] : template.results;
-                return Handlebars.render(tpl, view);
+                return Handlebars.compile(tpl)(view);
             };
             return renderFn;
         }
