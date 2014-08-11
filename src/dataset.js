@@ -301,7 +301,7 @@ var Dataset = (function() {
 
     renderFn = function(view, templateKey) {
         var tpl = templateKey ? template[templateKey] : template.results;
-        return Mustache.to_html( tpl, view );
+        return Handlebars.render( tpl, view );
     };
 
     return renderFn;

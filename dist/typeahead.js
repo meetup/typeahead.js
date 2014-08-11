@@ -4,7 +4,7 @@
  * Copyright 2013 Twitter, Inc. and other contributors; Licensed MIT
  */
 
-(function($, Mustache) {
+(function($, Handlebars) {
     var VERSION = "0.9.2";
     var utils = {
         isMsie: function() {
@@ -551,7 +551,7 @@
             }
             renderFn = function(view, templateKey) {
                 var tpl = templateKey ? template[templateKey] : template.results;
-                return Mustache.to_html(tpl, view);
+                return Handlebars.render(tpl, view);
             };
             return renderFn;
         }
@@ -1311,4 +1311,4 @@
             }
         };
     })();
-})(window.jQuery, window.Mustache);
+})(window.jQuery, window.Handlebars);
